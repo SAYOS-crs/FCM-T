@@ -16,15 +16,15 @@ let activeToken = "";
 
 // Default Demo Preset Values
 const DEMO_PRESET = {
-  apiKey: "AIzaSyAXW_3zVO0M72eztpd4SXZweok2kKF2S80",
-  authDomain: "social-app-382fc.firebaseapp.com",
-  projectId: "social-app-382fc",
-  storageBucket: "social-app-382fc.firebasestorage.app",
-  messagingSenderId: "145943775533",
-  appId: "1:145943775533:web:c2d338162d2479c4126ba4",
-  measurementId: "G-MN1531VBF2",
-  vapidKey: "BGfDM_KyZM4gnhVEpSknJCpZxFR5Cdhjl_0HGnaWPfuYIug0DB-kXkAs_w77K479QK0_7PU4PN8LVui-_2IVG1Y",
-  apiEndpoint: "https://httpbin.org/post",
+  apiKey: "<Set your api key here>",
+  authDomain: "<Set you Domain>.firebaseapp.com",
+  projectId: "<project_id>",
+  storageBucket: "<project_id>.firebasestorage.app",
+  messagingSenderId: "<sender_id>",
+  appId: "<app_id>",
+  measurementId: "G-<...>",
+  vapidKey: "<vap id key>",
+  apiEndpoint: "<your backend api endpint>",
 };
 
 // DOM References

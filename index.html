@@ -1,173 +1,263 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FCM Token & Notification Tester [Linux Terminal Edition]</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="container">
-      <!-- Main Linux Terminal Window -->
-      <div class="terminal-window">
-        <!-- Terminal Titlebar -->
-        <div class="terminal-header">
-          <div class="window-controls">
-            <span class="dot dot-close"></span>
-            <span class="dot dot-min"></span>
-            <span class="dot dot-max"></span>
-          </div>
-          <div class="window-title">
-            <span class="prompt-icon">root@fcm-kernel:~$</span> ./fcm-tester --daemon
-          </div>
-          <div class="status-badge">
-            <span id="sw-status-indicator" class="status-indicator"></span>
-            <span id="sw-status-text">SW: Unregistered</span>
-          </div>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FCM Token & Notification Tester [Linux Terminal Edition]</title>
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+    <body>
+        <div class="container">
+            <!-- Main Linux Terminal Window -->
+            <div class="terminal-window">
+                <!-- Terminal Titlebar -->
+                <div class="terminal-header">
+                    <div class="window-controls">
+                        <span class="dot dot-close"></span>
+                        <span class="dot dot-min"></span>
+                        <span class="dot dot-max"></span>
+                    </div>
+                    <div class="window-title">
+                        <span class="prompt-icon">root@fcm-kernel:~$</span>
+                        ./fcm-tester --daemon
+                    </div>
+                    <div class="status-badge">
+                        <span
+                            id="sw-status-indicator"
+                            class="status-indicator"
+                        ></span>
+                        <span id="sw-status-text">SW: Unregistered</span>
+                    </div>
+                </div>
+
+                <!-- Terminal Body Grid -->
+                <div class="terminal-body">
+                    <!-- Left Panel: Configuration Form -->
+                    <div class="panel">
+                        <div class="panel-title">
+                            ⚙️ <span>CONFIGURATION MATRIX</span>
+                        </div>
+
+                        <!-- Quick JSON Paste Accordion/Box -->
+                        <div class="json-quick-paste">
+                            <label for="json-paste"
+                                >📋 Quick Paste Firebase Config (JS Object /
+                                JSON):</label
+                            >
+                            <textarea
+                                id="json-paste"
+                                class="form-textarea"
+                                rows="3"
+                                placeholder='Paste raw config here e.g. { apiKey: "...", projectId: "..." }'
+                            ></textarea>
+                            <div
+                                style="
+                                    margin-top: 6px;
+                                    display: flex;
+                                    justify-content: flex-end;
+                                "
+                            >
+                                <button
+                                    id="btn-parse-json"
+                                    class="btn btn-sm btn-secondary"
+                                >
+                                    ⚡ Auto-fill Fields
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Individual Config Fields -->
+                        <div class="grid-2col">
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-apiKey"
+                                    >API Key <span class="req">*</span></label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-apiKey"
+                                    class="form-control"
+                                    placeholder="AIzaSy..."
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-projectId"
+                                    >Project ID
+                                    <span class="req">*</span></label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-projectId"
+                                    class="form-control"
+                                    placeholder="my-app-123"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="grid-2col">
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-authDomain"
+                                    >Auth Domain</label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-authDomain"
+                                    class="form-control"
+                                    placeholder="my-app.firebaseapp.com"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label
+                                    class="form-label"
+                                    for="cfg-storageBucket"
+                                    >Storage Bucket</label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-storageBucket"
+                                    class="form-control"
+                                    placeholder="my-app.appspot.com"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="grid-2col">
+                            <div class="form-group">
+                                <label
+                                    class="form-label"
+                                    for="cfg-messagingSenderId"
+                                    >Messaging Sender ID
+                                    <span class="req">*</span></label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-messagingSenderId"
+                                    class="form-control"
+                                    placeholder="1234567890"
+                                />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="cfg-appId"
+                                    >App ID <span class="req">*</span></label
+                                >
+                                <input
+                                    type="text"
+                                    id="cfg-appId"
+                                    class="form-control"
+                                    placeholder="1:1234:web:abcd"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="cfg-measurementId"
+                                >Measurement ID (Optional)</label
+                            >
+                            <input
+                                type="text"
+                                id="cfg-measurementId"
+                                class="form-control"
+                                placeholder="G-XXXXXXXXXX"
+                            />
+                        </div>
+
+                        <hr
+                            style="
+                                border: 0;
+                                border-top: 1px solid var(--border-color);
+                            "
+                        />
+
+                        <!-- Dynamic VAPID Key Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="cfg-vapidKey">
+                                🔑 Web Push VAPID Key <span class="req">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="cfg-vapidKey"
+                                class="form-control"
+                                placeholder="BEl8..."
+                            />
+                        </div>
+
+                        <!-- Target API Endpoint Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="cfg-apiEndpoint">
+                                🌐 Target API Endpoint (POST Token Target)
+                            </label>
+                            <input
+                                type="url"
+                                id="cfg-apiEndpoint"
+                                class="form-control"
+                                placeholder="https://httpbin.org/post - cant be empty or fake"
+                            />
+                        </div>
+
+                        <div class="btn-group" style="margin-top: 0.5rem">
+                            <button id="btn-load-preset" class="btn btn-sm">
+                                📁 Load Default Preset
+                            </button>
+                            <button
+                                id="btn-save-config"
+                                class="btn btn-sm btn-secondary"
+                            >
+                                💾 Save to LocalStorage
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: Controls & Terminal Log Stream -->
+                    <div class="panel log-stream-panel">
+                        <div class="panel-title">
+                            💻 <span>EXECUTION & LIVE SYSTEM LOGS</span>
+                        </div>
+
+                        <!-- Primary Control Action Buttons -->
+                        <div class="btn-group">
+                            <button id="btn-get-token" class="btn btn-primary">
+                                ▶ Get FCM Token
+                            </button>
+                            <button
+                                id="btn-send-endpoint"
+                                class="btn btn-secondary"
+                            >
+                                🚀 POST Token to API Endpoint
+                            </button>
+                            <button
+                                id="btn-clear-logs"
+                                class="btn btn-sm"
+                                style="margin-left: auto"
+                            >
+                                🧹 Clear
+                            </button>
+                        </div>
+
+                        <!-- Token Output Box -->
+                        <div class="token-container">
+                            <div class="token-header">
+                                <span>🔑 ACTIVE FCM REGISTRATION TOKEN:</span>
+                                <button
+                                    id="btn-copy-token"
+                                    class="btn btn-sm"
+                                    style="padding: 2px 8px"
+                                >
+                                    📋 Copy Token
+                                </button>
+                            </div>
+                            <div id="token-output" class="token-display">
+                                -- No token generated yet --
+                            </div>
+                        </div>
+
+                        <!-- Terminal Output Stream -->
+                        <div id="terminal-logs" class="terminal-log-box">
+                            <!-- Dynamic logs will be appended here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Terminal Body Grid -->
-        <div class="terminal-body">
-          <!-- Left Panel: Configuration Form -->
-          <div class="panel">
-            <div class="panel-title">
-              ⚙️ <span>CONFIGURATION MATRIX</span>
-            </div>
-
-            <!-- Quick JSON Paste Accordion/Box -->
-            <div class="json-quick-paste">
-              <label for="json-paste">📋 Quick Paste Firebase Config (JS Object / JSON):</label>
-              <textarea
-                id="json-paste"
-                class="form-textarea"
-                rows="3"
-                placeholder='Paste raw config here e.g. { apiKey: "...", projectId: "..." }'
-              ></textarea>
-              <div style="margin-top: 6px; display: flex; justify-content: flex-end;">
-                <button id="btn-parse-json" class="btn btn-sm btn-secondary">
-                  ⚡ Auto-fill Fields
-                </button>
-              </div>
-            </div>
-
-            <!-- Individual Config Fields -->
-            <div class="grid-2col">
-              <div class="form-group">
-                <label class="form-label" for="cfg-apiKey">API Key <span class="req">*</span></label>
-                <input type="text" id="cfg-apiKey" class="form-control" placeholder="AIzaSy..." />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cfg-projectId">Project ID <span class="req">*</span></label>
-                <input type="text" id="cfg-projectId" class="form-control" placeholder="my-app-123" />
-              </div>
-            </div>
-
-            <div class="grid-2col">
-              <div class="form-group">
-                <label class="form-label" for="cfg-authDomain">Auth Domain</label>
-                <input type="text" id="cfg-authDomain" class="form-control" placeholder="my-app.firebaseapp.com" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cfg-storageBucket">Storage Bucket</label>
-                <input type="text" id="cfg-storageBucket" class="form-control" placeholder="my-app.appspot.com" />
-              </div>
-            </div>
-
-            <div class="grid-2col">
-              <div class="form-group">
-                <label class="form-label" for="cfg-messagingSenderId">Messaging Sender ID <span class="req">*</span></label>
-                <input type="text" id="cfg-messagingSenderId" class="form-control" placeholder="1234567890" />
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="cfg-appId">App ID <span class="req">*</span></label>
-                <input type="text" id="cfg-appId" class="form-control" placeholder="1:1234:web:abcd" />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="cfg-measurementId">Measurement ID (Optional)</label>
-              <input type="text" id="cfg-measurementId" class="form-control" placeholder="G-XXXXXXXXXX" />
-            </div>
-
-            <hr style="border: 0; border-top: 1px solid var(--border-color);" />
-
-            <!-- Dynamic VAPID Key Input -->
-            <div class="form-group">
-              <label class="form-label" for="cfg-vapidKey">
-                🔑 Web Push VAPID Key <span class="req">*</span>
-              </label>
-              <input
-                type="text"
-                id="cfg-vapidKey"
-                class="form-control"
-                placeholder="BEl8..."
-              />
-            </div>
-
-            <!-- Target API Endpoint Input -->
-            <div class="form-group">
-              <label class="form-label" for="cfg-apiEndpoint">
-                🌐 Target API Endpoint (POST Token Target)
-              </label>
-              <input
-                type="url"
-                id="cfg-apiEndpoint"
-                class="form-control"
-                placeholder="https://api.yourdomain.com/v1/fcm/register"
-              />
-            </div>
-
-            <div class="btn-group" style="margin-top: 0.5rem;">
-              <button id="btn-load-preset" class="btn btn-sm">
-                📁 Load Default Preset
-              </button>
-              <button id="btn-save-config" class="btn btn-sm btn-secondary">
-                💾 Save to LocalStorage
-              </button>
-            </div>
-          </div>
-
-          <!-- Right Panel: Controls & Terminal Log Stream -->
-          <div class="panel log-stream-panel">
-            <div class="panel-title">
-              💻 <span>EXECUTION & LIVE SYSTEM LOGS</span>
-            </div>
-
-            <!-- Primary Control Action Buttons -->
-            <div class="btn-group">
-              <button id="btn-get-token" class="btn btn-primary">
-                ▶ Get FCM Token
-              </button>
-              <button id="btn-send-endpoint" class="btn btn-secondary">
-                🚀 POST Token to API Endpoint
-              </button>
-              <button id="btn-clear-logs" class="btn btn-sm" style="margin-left: auto;">
-                🧹 Clear
-              </button>
-            </div>
-
-            <!-- Token Output Box -->
-            <div class="token-container">
-              <div class="token-header">
-                <span>🔑 ACTIVE FCM REGISTRATION TOKEN:</span>
-                <button id="btn-copy-token" class="btn btn-sm" style="padding: 2px 8px;">
-                  📋 Copy Token
-                </button>
-              </div>
-              <div id="token-output" class="token-display">
-                -- No token generated yet --
-              </div>
-            </div>
-
-            <!-- Terminal Output Stream -->
-            <div id="terminal-logs" class="terminal-log-box">
-              <!-- Dynamic logs will be appended here -->
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script type="module" src="./app.js"></script>
-  </body>
+        <script type="module" src="./app.js"></script>
+    </body>
 </html>

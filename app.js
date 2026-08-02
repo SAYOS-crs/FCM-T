@@ -24,7 +24,7 @@ const DEMO_PRESET = {
   appId: "<app_id>",
   measurementId: "G-<...>",
   vapidKey: "<vap id key>",
-  apiEndpoint: "<your backend api endpint>",
+  apiEndpoint: "https://httpbin.org/post",
 };
 
 // DOM References
@@ -57,7 +57,10 @@ const dom = {
  */
 function sysLog(message, level = "INFO", details = null) {
   const now = new Date();
-  const timeStr = now.toTimeString().split(" ")[0] + "." + String(now.getMilliseconds()).padStart(3, "0");
+  const timeStr =
+    now.toTimeString().split(" ")[0] +
+    "." +
+    String(now.getMilliseconds()).padStart(3, "0");
 
   const entry = document.createElement("div");
   entry.className = "log-entry";
@@ -73,7 +76,8 @@ function sysLog(message, level = "INFO", details = null) {
   html += `<span class="log-msg">${escapeHtml(message)}`;
 
   if (details) {
-    const jsonStr = typeof details === "string" ? details : JSON.stringify(details, null, 2);
+    const jsonStr =
+      typeof details === "string" ? details : JSON.stringify(details, null, 2);
     html += `<pre>${escapeHtml(jsonStr)}</pre>`;
   }
 
@@ -124,10 +128,13 @@ function populateFormFields(cfg, vapid = "", endpoint = "") {
   if (cfg.apiKey !== undefined) dom.apiKey.value = cfg.apiKey;
   if (cfg.authDomain !== undefined) dom.authDomain.value = cfg.authDomain;
   if (cfg.projectId !== undefined) dom.projectId.value = cfg.projectId;
-  if (cfg.storageBucket !== undefined) dom.storageBucket.value = cfg.storageBucket;
-  if (cfg.messagingSenderId !== undefined) dom.messagingSenderId.value = cfg.messagingSenderId;
+  if (cfg.storageBucket !== undefined)
+    dom.storageBucket.value = cfg.storageBucket;
+  if (cfg.messagingSenderId !== undefined)
+    dom.messagingSenderId.value = cfg.messagingSenderId;
   if (cfg.appId !== undefined) dom.appId.value = cfg.appId;
-  if (cfg.measurementId !== undefined) dom.measurementId.value = cfg.measurementId;
+  if (cfg.measurementId !== undefined)
+    dom.measurementId.value = cfg.measurementId;
   if (vapid) dom.vapidKey.value = vapid;
   if (endpoint) dom.apiEndpoint.value = endpoint;
 }
@@ -175,16 +182,47 @@ function parseQuickPasteJSON() {
   }
 
   try {
-    // Convert JS Object format to valid JSON string if needed (quote keys)
-    let formattedStr = rawText
-      .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":')
-      .replace(/'/g, '"');
-    
-    const parsed = JSON.parse(formattedStr);
-    populateFormFields(parsed);
-    sysLog("Successfully auto-filled form fields from parsed object!", "SUCCESS", parsed);
+    // Extract everything between first { and last }
+    const match = rawText.match(/\{[\s\S]*\}/);
+    if (!match) {
+      throw new Error("No valid JSON / JS object '{ ... }' found in input.");
+    }
+    const jsonBlock = match[0];
+
+    let parsed = null;
+    // 1. Try standard JSON.parse first
+    try {
+      parsed = JSON.parse(jsonBlock);
+    } catch (jsonErr) {
+      // 2. Try evaluating as JS object expression (handles unquoted keys, single quotes, trailing commas, etc.)
+      try {
+        parsed = new Function(`return (${jsonBlock});`)();
+      } catch (evalErr) {
+        // 3. Fallback: sanitize JS object to JSON string
+        let sanitized = jsonBlock
+          .replace(/,\s*([\}\]])/g, "$1") // Remove trailing commas
+          .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?\s*:/g, '"$2":') // Quote unquoted keys
+          .replace(/'/g, '"'); // Convert single quotes to double quotes
+        parsed = JSON.parse(sanitized);
+      }
+    }
+
+    if (parsed && typeof parsed === "object") {
+      populateFormFields(parsed);
+      sysLog(
+        "Successfully auto-filled form fields from parsed object!",
+        "SUCCESS",
+        parsed,
+      );
+    } else {
+      throw new Error("Parsed result is not a valid object.");
+    }
   } catch (err) {
-    sysLog("Could not parse object string. Please check format.", "ERROR", err.message);
+    sysLog(
+      "Could not parse object string. Please check format.",
+      "ERROR",
+      err.message,
+    );
   }
 }
 
@@ -206,7 +244,10 @@ async function initializeFirebaseClient(config) {
     sysLog("⚡ Foreground Message Received!", "SUCCESS", payload);
   });
 
-  sysLog(`Initialized Firebase Client App [Project: ${config.projectId}]`, "SUCCESS");
+  sysLog(
+    `Initialized Firebase Client App [Project: ${config.projectId}]`,
+    "SUCCESS",
+  );
   return currentMessaging;
 }
 
@@ -215,11 +256,15 @@ async function initializeFirebaseClient(config) {
  */
 async function syncServiceWorker(config) {
   if (!("serviceWorker" in navigator)) {
-    throw new Error("Service Workers are not supported in this browser context.");
+    throw new Error(
+      "Service Workers are not supported in this browser context.",
+    );
   }
 
   sysLog("Registering Service Worker (firebase-messaging-sw.js)...", "INFO");
-  const registration = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
+  const registration = await navigator.serviceWorker.register(
+    "./firebase-messaging-sw.js",
+  );
   const readyReg = await navigator.serviceWorker.ready;
 
   updateSwStatus("online", "SW: Active & Ready");
@@ -231,7 +276,10 @@ async function syncServiceWorker(config) {
       type: "SET_FIREBASE_CONFIG",
       config: config,
     });
-    sysLog("Dispatched dynamic firebaseConfig to Service Worker via postMessage.", "INFO");
+    sysLog(
+      "Dispatched dynamic firebaseConfig to Service Worker via postMessage.",
+      "INFO",
+    );
   }
 
   return readyReg;
@@ -245,8 +293,16 @@ async function handleGetFcmToken() {
   const vapidKey = dom.vapidKey.value.trim();
 
   // Validate required inputs
-  if (!config.apiKey || !config.projectId || !config.messagingSenderId || !config.appId) {
-    sysLog("Missing required Firebase Config parameters (apiKey, projectId, messagingSenderId, appId).", "ERROR");
+  if (
+    !config.apiKey ||
+    !config.projectId ||
+    !config.messagingSenderId ||
+    !config.appId
+  ) {
+    sysLog(
+      "Missing required Firebase Config parameters (apiKey, projectId, messagingSenderId, appId).",
+      "ERROR",
+    );
     alert("Please fill in all required Firebase configuration fields.");
     return;
   }
@@ -262,7 +318,10 @@ async function handleGetFcmToken() {
     const permission = await Notification.requestPermission();
 
     if (permission !== "granted") {
-      sysLog(`Notification permission denied or dismissed. Permission state: '${permission}'`, "WARN");
+      sysLog(
+        `Notification permission denied or dismissed. Permission state: '${permission}'`,
+        "WARN",
+      );
       updateSwStatus("warn", `Permission: ${permission}`);
       return;
     }
@@ -273,7 +332,10 @@ async function handleGetFcmToken() {
     const messaging = await initializeFirebaseClient(config);
     const swRegistration = await syncServiceWorker(config);
 
-    sysLog("Requesting FCM Registration Token from Firebase Cloud Messaging...", "INFO");
+    sysLog(
+      "Requesting FCM Registration Token from Firebase Cloud Messaging...",
+      "INFO",
+    );
     const token = await getToken(messaging, {
       vapidKey: vapidKey,
       serviceWorkerRegistration: swRegistration,
@@ -291,12 +353,18 @@ async function handleGetFcmToken() {
       // If API Endpoint is specified, automatically send or log prompt
       const targetEndpoint = dom.apiEndpoint.value.trim();
       if (targetEndpoint) {
-        sysLog(`Auto-triggering token dispatch to API Endpoint: ${targetEndpoint}`, "INFO");
+        sysLog(
+          `Auto-triggering token dispatch to API Endpoint: ${targetEndpoint}`,
+          "INFO",
+        );
         await handleSendTokenToEndpoint();
       }
     } else {
       dom.tokenOutput.textContent = "-- Token Generation Failed --";
-      sysLog("No registration token available. Check FCM setup and VAPID key.", "ERROR");
+      sysLog(
+        "No registration token available. Check FCM setup and VAPID key.",
+        "ERROR",
+      );
     }
   } catch (error) {
     updateSwStatus("error", "SW Error");
@@ -330,7 +398,11 @@ async function handleSendTokenToEndpoint() {
     userAgent: navigator.userAgent,
   };
 
-  sysLog(`Initiating HTTP POST request to API Endpoint: ${endpoint}`, "HTTP POST", payload);
+  sysLog(
+    `Initiating HTTP POST request to API Endpoint: ${endpoint}`,
+    "HTTP POST",
+    payload,
+  );
 
   try {
     const response = await fetch(endpoint, {
@@ -351,12 +423,24 @@ async function handleSendTokenToEndpoint() {
     }
 
     if (response.ok) {
-      sysLog(`API Endpoint responded successfully [${statusText}]`, "SUCCESS", resData);
+      sysLog(
+        `API Endpoint responded successfully [${statusText}]`,
+        "SUCCESS",
+        resData,
+      );
     } else {
-      sysLog(`API Endpoint returned non-2xx status [${statusText}]`, "WARN", resData);
+      sysLog(
+        `API Endpoint returned non-2xx status [${statusText}]`,
+        "WARN",
+        resData,
+      );
     }
   } catch (err) {
-    sysLog(`Failed to POST token to API Endpoint: ${err.message}`, "ERROR", err);
+    sysLog(
+      `Failed to POST token to API Endpoint: ${err.message}`,
+      "ERROR",
+      err,
+    );
   }
 }
 
@@ -365,12 +449,19 @@ async function handleSendTokenToEndpoint() {
  */
 function init() {
   sysLog("FCM Tester [Linux Kernel Edition v2.0] Initialized.", "INFO");
-  sysLog("System ready. Enter Firebase Credentials & VAPID key or load defaults.", "INFO");
+  sysLog(
+    "System ready. Enter Firebase Credentials & VAPID key or load defaults.",
+    "INFO",
+  );
 
   // Restore saved config if available, otherwise load preset defaults
   const loaded = loadFromLocalStorage();
   if (!loaded) {
-    populateFormFields(DEMO_PRESET, DEMO_PRESET.vapidKey, DEMO_PRESET.apiEndpoint);
+    populateFormFields(
+      DEMO_PRESET,
+      DEMO_PRESET.vapidKey,
+      DEMO_PRESET.apiEndpoint,
+    );
     sysLog("Loaded default demo project settings.", "INFO");
   }
 
@@ -380,7 +471,11 @@ function init() {
   dom.btnParseJson.addEventListener("click", parseQuickPasteJSON);
 
   dom.btnLoadPreset.addEventListener("click", () => {
-    populateFormFields(DEMO_PRESET, DEMO_PRESET.vapidKey, DEMO_PRESET.apiEndpoint);
+    populateFormFields(
+      DEMO_PRESET,
+      DEMO_PRESET.vapidKey,
+      DEMO_PRESET.apiEndpoint,
+    );
     sysLog("Reset form fields to Demo Preset values.", "INFO");
   });
 
@@ -405,7 +500,11 @@ function init() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data && event.data.type === "BACKGROUND_MESSAGE") {
-        sysLog("🔔 Background Notification Received by Service Worker!", "SUCCESS", event.data.payload);
+        sysLog(
+          "🔔 Background Notification Received by Service Worker!",
+          "SUCCESS",
+          event.data.payload,
+        );
       }
     });
   }

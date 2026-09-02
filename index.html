@@ -3,23 +3,27 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>FCM Token & Notification Tester [Linux Terminal Edition]</title>
+        <title>FCM Token & Notification Tester [Vercel Edition]</title>
         <link rel="stylesheet" href="./styles.css" />
     </head>
     <body>
         <div class="container">
-            <!-- Main Linux Terminal Window -->
+            <!-- Main Vercel-Style Window Card -->
             <div class="terminal-window">
-                <!-- Terminal Titlebar -->
+                <!-- Top Navigation Bar -->
                 <div class="terminal-header">
                     <div class="window-controls">
-                        <span class="dot dot-close"></span>
-                        <span class="dot dot-min"></span>
-                        <span class="dot dot-max"></span>
-                    </div>
-                    <div class="window-title">
-                        <span class="prompt-icon">root@fcm-kernel:~$</span>
-                        ./fcm-tester --daemon
+                        <div class="vercel-logo" title="FCM-Kernel Push Tester">
+                            <svg height="16" viewBox="0 0 115 100" fill="currentColor">
+                                <path d="M57.5 0L115 100H0L57.5 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="window-title">
+                            <span class="repo-name">fcm-kernel</span>
+                            <span style="color: var(--border-hover)">/</span>
+                            <span>push-tester</span>
+                            <span class="env-badge">Production</span>
+                        </div>
                     </div>
                     <div class="status-badge">
                         <span
@@ -30,19 +34,18 @@
                     </div>
                 </div>
 
-                <!-- Terminal Body Grid -->
+                <!-- Main Grid Body -->
                 <div class="terminal-body">
                     <!-- Left Panel: Configuration Form -->
                     <div class="panel">
                         <div class="panel-title">
-                            ⚙️ <span>CONFIGURATION MATRIX</span>
+                            <span>Project Configuration</span>
                         </div>
 
-                        <!-- Quick JSON Paste Accordion/Box -->
+                        <!-- Quick JSON Paste Box -->
                         <div class="json-quick-paste">
                             <label for="json-paste"
-                                >📋 Quick Paste Firebase Config (JS Object /
-                                JSON):</label
+                                >Quick Paste Firebase Config (JS Object / JSON)</label
                             >
                             <textarea
                                 id="json-paste"
@@ -52,7 +55,7 @@
                             ></textarea>
                             <div
                                 style="
-                                    margin-top: 6px;
+                                    margin-top: 4px;
                                     display: flex;
                                     justify-content: flex-end;
                                 "
@@ -61,7 +64,7 @@
                                     id="btn-parse-json"
                                     class="btn btn-sm btn-secondary"
                                 >
-                                    ⚡ Auto-fill Fields
+                                    Auto-fill Fields
                                 </button>
                             </div>
                         </div>
@@ -115,7 +118,7 @@
                                     type="text"
                                     id="cfg-storageBucket"
                                     class="form-control"
-                                    placeholder="my-app.appspot.com"
+                                    placeholder="my-app.firebasestorage.app"
                                 />
                             </div>
                         </div>
@@ -163,14 +166,14 @@
                         <hr
                             style="
                                 border: 0;
-                                border-top: 1px solid var(--border-color);
+                                border-top: 1px solid var(--border-subtle);
                             "
                         />
 
                         <!-- Dynamic VAPID Key Input -->
                         <div class="form-group">
                             <label class="form-label" for="cfg-vapidKey">
-                                🔑 Web Push VAPID Key <span class="req">*</span>
+                                Web Push VAPID Key <span class="req">*</span>
                             </label>
                             <input
                                 type="text"
@@ -183,65 +186,85 @@
                         <!-- Target API Endpoint Input -->
                         <div class="form-group">
                             <label class="form-label" for="cfg-apiEndpoint">
-                                🌐 Target API Endpoint (POST Token Target)
+                                Target API Endpoint URL
                             </label>
                             <input
                                 type="url"
                                 id="cfg-apiEndpoint"
                                 class="form-control"
-                                placeholder="https://httpbin.org/post - cant be empty or fake"
+                                placeholder="https://httpbin.org/post"
+                            />
+                        </div>
+
+                        <!-- Target API Authorization Token Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="cfg-apiAuthToken">
+                                Authorization / Bearer Token (Optional)
+                            </label>
+                            <input
+                                type="text"
+                                id="cfg-apiAuthToken"
+                                class="form-control"
+                                placeholder="e.g. your_jwt_token or User your_jwt_token"
                             />
                         </div>
 
                         <div class="btn-group" style="margin-top: 0.5rem">
                             <button id="btn-load-preset" class="btn btn-sm">
-                                📁 Load Default Preset
+                                Load Default Preset
                             </button>
                             <button
                                 id="btn-save-config"
                                 class="btn btn-sm btn-secondary"
                             >
-                                💾 Save to LocalStorage
+                                Save to LocalStorage
                             </button>
                         </div>
                     </div>
 
-                    <!-- Right Panel: Controls & Terminal Log Stream -->
+                    <!-- Right Panel: Controls & Live System Log Stream -->
                     <div class="panel log-stream-panel">
                         <div class="panel-title">
-                            💻 <span>EXECUTION & LIVE SYSTEM LOGS</span>
+                            <span>Execution & Live System Logs</span>
                         </div>
 
                         <!-- Primary Control Action Buttons -->
                         <div class="btn-group">
                             <button id="btn-get-token" class="btn btn-primary">
-                                ▶ Get FCM Token
+                                Get FCM Token
                             </button>
                             <button
                                 id="btn-send-endpoint"
                                 class="btn btn-secondary"
                             >
-                                🚀 POST Token to API Endpoint
+                                POST Token to API Endpoint
+                            </button>
+                            <button
+                                id="btn-test-notif"
+                                class="btn btn-sm"
+                                title="Test if browser notification popups work locally"
+                            >
+                                Test Notification
                             </button>
                             <button
                                 id="btn-clear-logs"
                                 class="btn btn-sm"
                                 style="margin-left: auto"
                             >
-                                🧹 Clear
+                                Clear Logs
                             </button>
                         </div>
 
-                        <!-- Token Output Box -->
+                        <!-- Active Token Output Box -->
                         <div class="token-container">
                             <div class="token-header">
-                                <span>🔑 ACTIVE FCM REGISTRATION TOKEN:</span>
+                                <span>Active FCM Registration Token</span>
                                 <button
                                     id="btn-copy-token"
                                     class="btn btn-sm"
                                     style="padding: 2px 8px"
                                 >
-                                    📋 Copy Token
+                                    Copy
                                 </button>
                             </div>
                             <div id="token-output" class="token-display">

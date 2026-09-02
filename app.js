@@ -25,6 +25,7 @@ const DEMO_PRESET = {
   measurementId: "G-<...>",
   vapidKey: "<vap id key>",
   apiEndpoint: "https://httpbin.org/post",
+  apiAuthToken: "",
 };
 
 // DOM References
@@ -38,12 +39,14 @@ const dom = {
   measurementId: document.getElementById("cfg-measurementId"),
   vapidKey: document.getElementById("cfg-vapidKey"),
   apiEndpoint: document.getElementById("cfg-apiEndpoint"),
+  apiAuthToken: document.getElementById("cfg-apiAuthToken"),
   jsonPaste: document.getElementById("json-paste"),
   btnParseJson: document.getElementById("btn-parse-json"),
   btnLoadPreset: document.getElementById("btn-load-preset"),
   btnSaveConfig: document.getElementById("btn-save-config"),
   btnGetToken: document.getElementById("btn-get-token"),
   btnSendEndpoint: document.getElementById("btn-send-endpoint"),
+  btnTestNotif: document.getElementById("btn-test-notif"),
   btnClearLogs: document.getElementById("btn-clear-logs"),
   btnCopyToken: document.getElementById("btn-copy-token"),
   tokenOutput: document.getElementById("token-output"),
@@ -53,7 +56,7 @@ const dom = {
 };
 
 /**
- * Enhanced Linux Terminal Logging Utility
+ * Enhanced Console Logging Utility
  */
 function sysLog(message, level = "INFO", details = null) {
   const now = new Date();
@@ -118,13 +121,14 @@ function getFormConfig() {
     messagingSenderId: dom.messagingSenderId.value.trim(),
     appId: dom.appId.value.trim(),
     measurementId: dom.measurementId.value.trim(),
+    apiAuthToken: dom.apiAuthToken ? dom.apiAuthToken.value.trim() : "",
   };
 }
 
 /**
  * Fill Form Fields from Config Object
  */
-function populateFormFields(cfg, vapid = "", endpoint = "") {
+function populateFormFields(cfg, vapid = "", endpoint = "", authToken = "") {
   if (cfg.apiKey !== undefined) dom.apiKey.value = cfg.apiKey;
   if (cfg.authDomain !== undefined) dom.authDomain.value = cfg.authDomain;
   if (cfg.projectId !== undefined) dom.projectId.value = cfg.projectId;
@@ -135,8 +139,13 @@ function populateFormFields(cfg, vapid = "", endpoint = "") {
   if (cfg.appId !== undefined) dom.appId.value = cfg.appId;
   if (cfg.measurementId !== undefined)
     dom.measurementId.value = cfg.measurementId;
-  if (vapid) dom.vapidKey.value = vapid;
-  if (endpoint) dom.apiEndpoint.value = endpoint;
+  if (vapid !== undefined && vapid !== null) dom.vapidKey.value = vapid;
+  if (endpoint !== undefined && endpoint !== null) dom.apiEndpoint.value = endpoint;
+  if (authToken !== undefined && authToken !== null && authToken !== "") {
+    dom.apiAuthToken.value = authToken;
+  } else if (cfg.apiAuthToken !== undefined) {
+    dom.apiAuthToken.value = cfg.apiAuthToken;
+  }
 }
 
 /**
@@ -146,10 +155,12 @@ function saveToLocalStorage() {
   const config = getFormConfig();
   const vapidKey = dom.vapidKey.value.trim();
   const apiEndpoint = dom.apiEndpoint.value.trim();
+  const apiAuthToken = dom.apiAuthToken.value.trim();
 
   localStorage.setItem("fcm_config", JSON.stringify(config));
   localStorage.setItem("fcm_vapid_key", vapidKey);
   localStorage.setItem("fcm_api_endpoint", apiEndpoint);
+  localStorage.setItem("fcm_api_auth_token", apiAuthToken);
   sysLog("Configuration saved to browser LocalStorage.", "SUCCESS");
 }
 
@@ -157,11 +168,18 @@ function loadFromLocalStorage() {
   const savedCfg = localStorage.getItem("fcm_config");
   const savedVapid = localStorage.getItem("fcm_vapid_key");
   const savedEndpoint = localStorage.getItem("fcm_api_endpoint");
+  const savedAuthToken = localStorage.getItem("fcm_api_auth_token");
 
   if (savedCfg) {
     try {
       const parsed = JSON.parse(savedCfg);
-      populateFormFields(parsed, savedVapid || "", savedEndpoint || "");
+      const authToken = savedAuthToken || parsed.apiAuthToken || "";
+      populateFormFields(
+        parsed,
+        savedVapid || "",
+        savedEndpoint || "",
+        authToken,
+      );
       sysLog("Restored configuration from LocalStorage.", "INFO");
       return true;
     } catch (e) {
@@ -227,6 +245,48 @@ function parseQuickPasteJSON() {
 }
 
 /**
+ * Trigger Visual Desktop Notification (for foreground / active tabs)
+ */
+function displayVisualNotification(payload, source = "Foreground") {
+  if (!payload) return;
+  const notif = payload.notification || {};
+  const data = payload.data || {};
+
+  const title = notif.title || data.title || `🔔 ${source} Notification`;
+  const body =
+    notif.body ||
+    data.body ||
+    (data && Object.keys(data).length > 0
+      ? JSON.stringify(data)
+      : "Push notification received.");
+  const icon = notif.icon || data.icon || undefined;
+
+  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    try {
+      const n = new Notification(title, {
+        body: body,
+        icon: icon,
+        data: payload,
+      });
+      n.onclick = () => {
+        window.focus();
+        n.close();
+      };
+    } catch (err) {
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.showNotification(title, {
+            body: body,
+            icon: icon,
+            data: payload,
+          });
+        });
+      }
+    }
+  }
+}
+
+/**
  * Dynamic Firebase Initialization
  */
 async function initializeFirebaseClient(config) {
@@ -241,7 +301,8 @@ async function initializeFirebaseClient(config) {
 
   // Foreground Message Handler
   onMessage(currentMessaging, (payload) => {
-    sysLog("⚡ Foreground Message Received!", "SUCCESS", payload);
+    sysLog("Foreground Message Received", "SUCCESS", payload);
+    displayVisualNotification(payload, "Foreground");
   });
 
   sysLog(
@@ -265,14 +326,22 @@ async function syncServiceWorker(config) {
   const registration = await navigator.serviceWorker.register(
     "./firebase-messaging-sw.js",
   );
+
+  try {
+    await registration.update();
+  } catch (e) {
+    // Ignore update check failures
+  }
+
   const readyReg = await navigator.serviceWorker.ready;
 
   updateSwStatus("online", "SW: Active & Ready");
   sysLog("Service Worker active and ready.", "SUCCESS");
 
-  // Post dynamic config to SW
-  if (readyReg.active) {
-    readyReg.active.postMessage({
+  // Post dynamic config to active SW and controlling worker
+  const swTarget = readyReg.active || navigator.serviceWorker.controller;
+  if (swTarget) {
+    swTarget.postMessage({
       type: "SET_FIREBASE_CONFIG",
       config: config,
     });
@@ -389,28 +458,37 @@ async function handleSendTokenToEndpoint() {
     return;
   }
 
-  const config = getFormConfig();
+  const rawAuth = dom.apiAuthToken ? dom.apiAuthToken.value.trim() : "";
+  const headers = {
+    "Content-Type": "application/json",
+    "X-FCM-Client": "FCM-Tester-Linux",
+  };
+
+  if (rawAuth) {
+    const formattedAuth = rawAuth.toLowerCase().startsWith("user ")
+      ? rawAuth
+      : `User ${rawAuth}`;
+    headers["Authorization"] = formattedAuth;
+  }
+
   const payload = {
     token: activeToken,
-    projectId: config.projectId,
-    messagingSenderId: config.messagingSenderId,
-    timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
   };
 
   sysLog(
     `Initiating HTTP POST request to API Endpoint: ${endpoint}`,
     "HTTP POST",
-    payload,
+    {
+      endpoint,
+      headers,
+      payload,
+    },
   );
 
   try {
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-FCM-Client": "FCM-Tester-Linux",
-      },
+      headers: headers,
       body: JSON.stringify(payload),
     });
 
@@ -445,10 +523,69 @@ async function handleSendTokenToEndpoint() {
 }
 
 /**
+ * Test Local Browser & Service Worker Notification
+ */
+async function handleTestLocalNotification() {
+  if (!("Notification" in window)) {
+    sysLog("Notifications are not supported in this browser.", "ERROR");
+    alert("Notifications are not supported in your browser.");
+    return;
+  }
+
+  let permission = Notification.permission;
+  if (permission !== "granted") {
+    sysLog("Requesting browser Notification permission...", "INFO");
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission !== "granted") {
+    sysLog(
+      `Cannot display test notification: Permission is '${permission}'`,
+      "WARN",
+    );
+    alert(
+      `Please enable notification permissions in your browser address bar/settings (currently '${permission}').`,
+    );
+    return;
+  }
+
+  const testPayload = {
+    notification: {
+      title: "🐧 FCM-Kernel Notification Test",
+      body: "Notification system is working! You will receive messages from backend.",
+    },
+    data: {
+      source: "local_test_button",
+      timestamp: new Date().toISOString(),
+    },
+  };
+
+  sysLog("Triggering local test notification...", "SUCCESS", testPayload);
+  displayVisualNotification(testPayload, "Local Test");
+
+  // Also trigger Service Worker test notification if SW is available
+  if ("serviceWorker" in navigator) {
+    try {
+      const readyReg = await navigator.serviceWorker.ready;
+      const swTarget = readyReg.active || navigator.serviceWorker.controller;
+      if (swTarget) {
+        swTarget.postMessage({
+          type: "TEST_LOCAL_NOTIFICATION",
+          title: "🐧 FCM-Kernel (SW Test)",
+          body: "Service Worker notification display verified!",
+        });
+      }
+    } catch (e) {
+      // SW test optional
+    }
+  }
+}
+
+/**
  * Event Listeners & Bootstrapping
  */
 function init() {
-  sysLog("FCM Tester [Linux Kernel Edition v2.0] Initialized.", "INFO");
+  sysLog("FCM Push Tester [Vercel Edition] Initialized.", "INFO");
   sysLog(
     "System ready. Enter Firebase Credentials & VAPID key or load defaults.",
     "INFO",
@@ -461,13 +598,46 @@ function init() {
       DEMO_PRESET,
       DEMO_PRESET.vapidKey,
       DEMO_PRESET.apiEndpoint,
+      DEMO_PRESET.apiAuthToken,
     );
     sysLog("Loaded default demo project settings.", "INFO");
+  }
+
+  // Auto-arm listeners if saved config and granted permissions exist
+  const currentConfig = getFormConfig();
+  if (
+    currentConfig.apiKey &&
+    !currentConfig.apiKey.startsWith("<") &&
+    currentConfig.projectId &&
+    !currentConfig.projectId.startsWith("<")
+  ) {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      sysLog("Notification permission is granted. Auto-arming listeners...", "INFO");
+      initializeFirebaseClient(currentConfig)
+        .then(() => syncServiceWorker(currentConfig))
+        .then(() => {
+          sysLog(
+            "Push listeners armed and active in foreground & background.",
+            "SUCCESS",
+          );
+        })
+        .catch((err) => {
+          sysLog(`Auto-arm notice: ${err.message}`, "WARN");
+        });
+    } else if (typeof Notification !== "undefined") {
+      updateSwStatus(
+        Notification.permission === "denied" ? "error" : "warn",
+        `Permission: ${Notification.permission}`,
+      );
+    }
   }
 
   // Button Actions
   dom.btnGetToken.addEventListener("click", handleGetFcmToken);
   dom.btnSendEndpoint.addEventListener("click", handleSendTokenToEndpoint);
+  if (dom.btnTestNotif) {
+    dom.btnTestNotif.addEventListener("click", handleTestLocalNotification);
+  }
   dom.btnParseJson.addEventListener("click", parseQuickPasteJSON);
 
   dom.btnLoadPreset.addEventListener("click", () => {
@@ -475,6 +645,7 @@ function init() {
       DEMO_PRESET,
       DEMO_PRESET.vapidKey,
       DEMO_PRESET.apiEndpoint,
+      DEMO_PRESET.apiAuthToken,
     );
     sysLog("Reset form fields to Demo Preset values.", "INFO");
   });
@@ -500,8 +671,9 @@ function init() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data && event.data.type === "BACKGROUND_MESSAGE") {
+        const src = event.data.source || "Service Worker";
         sysLog(
-          "🔔 Background Notification Received by Service Worker!",
+          `Background Notification Received [${src}]`,
           "SUCCESS",
           event.data.payload,
         );

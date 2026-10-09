@@ -70,7 +70,7 @@ Open `http://localhost:8000` (or `http://localhost:3000`) in your browser.
 5. **Dispatch Token to API Endpoint**:
    - Click **🚀 POST Token to API Endpoint** to test sending the token payload to your server.
 6. **Note**
-   - make sure that " Use Google services for push messaging " in you browser in on
+   - make sure that " Use Google services for push messaging " option in you browser in ON
 ---
 
 ## 📡 API Endpoint Request & Payload Schema
